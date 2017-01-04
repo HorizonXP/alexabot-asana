@@ -1,4 +1,4 @@
-asana==0.6.2
+wunderpy2==0.1.4
 oauthlib==2.0.1
 requests==2.9.2
 requests-oauthlib==0.6.2

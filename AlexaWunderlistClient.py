@@ -7,46 +7,37 @@ import calendar
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-import asana
+import wunderpy2
 from six import print_
 
 ### Setup Instructions ###
 #
-# 1. Create a new Asana account called "Alexa Bot". Log into Asana on your
-#    browser as Alexa Bot. Follow the steps below to get the right parameters.
-#    Tasks will be created from this account.
+# 1. Create a new Wunderlist developer application. You'll need its client ID,
+#    and the access token for it to access your account.
 #
-# 2. Set your ASANA_ACCESS_TOKEN environment variable to a Personal Access Token
-#    obtained in the Asana Account Settings.
+# 2. Set your WUNDERLIST_ACCESS_TOKEN environment variable to a Personal Access Token
+#    obtained in the Wunderlist Account Settings. Do the same for WUNDERLIST_CLIENT_ID.
 #
-# 3. Set ASANA_WORKSPACE_ID to the id for your workspace.
-#    Go to https://app.asana.com/api/1.0/workspaces to find the correct id.
+# 3. Set WUNDERLIST_LIST_ID to the id for your list.
+#    Go to https://a.wunderlist.com/api/v1/lists to find the correct id.
 #
-# 4. Set ASANA_USERS for people you want to assign tasks to or add as followers.
-#    Go to https://app.asana.com/api/1.0/workspaces/ASANA_WORKSPACE_ID/users.
+# 4. Set WUNDERLIST_USERS for people you want to assign tasks to or add as followers.
+#    Go to https://a.wunderlist.com/api/v1/users.
 #    Only use first names, and make sure they're unique.
 #    The NAMEs need to match the CreateTaskNAME functions in the IntentSchema
 #    and Sample Utterances.
 #
-# 5. Set ASANA_PROJECT_ID to the project tasks should go to.
-#    Go to https://app.asana.com/api/1.0/workspaces/ASANA_WORKSPACE_ID/projects.
-#    It's recommended to create a project called "Alexa Tasks" to keep all the
-#    tasks in one place.
-#
-# 6. Set timezone offset to time difference from GMT. TODO: use pytz to properly
+# 5. Set timezone offset to time difference from GMT. TODO: use pytz to properly
 #    handle timezones.
 
-ASANA_WORKSPACE_ID = 123456789123456789
+WUNDERLIST_LIST_ID = 123456789123456789
 
-ASANA_USERS = {
-    "AlexaBot":123456789, # Keep this entry and replace with your AlexaBot's ID
+WUNDERLIST_USERS = {
     "Peter":123456789,
     "Charlie":123456789,
     "David":123456789,
     "Elizabeth":123456789,
 }
-
-ASANA_PROJECT_ID = 123456789123456789 # Alexa List
 
 TIMEZONE_OFFSET = -8
 
@@ -64,11 +55,11 @@ def alexa_event_handler(event, *args, **kwargs):
     else:
         target_date = None
 
-    # Create the task in Asana
+    # Create the task in Wunderlist
     success = create_task(task_assignee_name, task_title, target_date)
 
     # Determine what Alexa should say back to the user
-    # TODO: handle Asana errors
+    # TODO: handle Wunderlist errors
     if success:
         msg = "Added a task for " + task_assignee_name + ". " + task_title + ". "
     else:
@@ -93,39 +84,37 @@ def alexa_event_handler(event, *args, **kwargs):
     return response
 
 def create_task(task_assignee_name, task_title, target_date):
-    task_assignee_id = ASANA_USERS[task_assignee_name]
+    task_assignee_id = WUNDERLIST_USERS[task_assignee_name]
     task_followers = []
     task_target_date = get_absolute_date(target_date)
 
     ### You can add special logic to who follows which task
     '''
     if task_assignee_name == "Bob" or task_assignee_name == "Charlie":
-        task_followers.append(ASANA_USERS["David"])
-        task_followers.append(ASANA_USERS["Elizabeth"])
+        task_followers.append(WUNDERLIST_USERS["David"])
+        task_followers.append(WUNDERLIST_USERS["Elizabeth"])
 
     if task_assignee_name == "Charlie":
-        task_followers.append(ASANA_USERS["Bob"])
+        task_followers.append(WUNDERLIST_USERS["Bob"])
     '''
 
     # Add Task Asignee and AlexaBot as followers
     task_followers.append(task_assignee_id)
-    task_followers.append(ASANA_USERS["AlexaBot"])
 
-    # Debugging: Measure how long the Asana API takes to process
+    # Debugging: Measure how long the Wunderlist API takes to process
     start_time = time.time()
 
-    client = asana.Client.access_token(os.environ['ASANA_ACCESS_TOKEN'])
+    api = wunderpy2.WunderApi()
+    client = api.get_client(os.environ['WUNDERLIST_ACCESS_TOKEN'], os.environ['WUNDERLIST_CLIENT_ID'])
 
-    result = client.tasks.create_in_workspace(ASANA_WORKSPACE_ID,
-                                              {'name': task_title,
-                                               'assignee': task_assignee_id,
-                                               'due_on': task_target_date,
-                                               'notes': 'Created by Alexa Bot. Please excuse spelling errors.',
-                                               'projects': [ASANA_PROJECT_ID],
-                                               'followers': task_followers})
+    result = client.create_task(WUNDERLIST_LIST_ID,
+                              task_title,
+                              due_date=task_target_date,
+                              assignee_id=task_assignee_id)
+    client.create_note(result[wunderpy2.Task.ID], "Created by Alexa Bot. Please excuse spelling errors.")
     # Debugging: print task details and API process time
     print_(json.dumps(result, indent=4))
-    print("--- Total Asana API Time: %s seconds ---" % (time.time() - start_time))
+    print("--- Total Wunderlist API Time: %s seconds ---" % (time.time() - start_time))
 
     #TODO: Handle Errors and return False if there's an error
     return True;

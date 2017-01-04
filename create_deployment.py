@@ -24,7 +24,7 @@ root_deployments_dir = "./deployments"
 # List of files that should be included in the deployment
 # Only the files listed here, and the libraries in the requirements.txt
 # file will be included in the deployment.
-deployment_files = ['AlexaAsanaClient.py']
+deployment_files = ['AlexaWunderlistClient.py']
 
 def _read_requirements():
     with open("./requirements.txt", 'r') as f:
